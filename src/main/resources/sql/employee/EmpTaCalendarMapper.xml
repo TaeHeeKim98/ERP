@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.employee.dao.EmpTaCalendarDao">
+<select id = "empTaCalendarList" resultType="kr.happyjob.study.employee.model.EmpTaCalendarModel">
+		SELECT ll.vac_rdate, ll.vac_stat, COUNT(*) AS vac_cnt,ll.vac_no, ll.vac_sdate , ll.vac_type ,  ll.detail_name
+			FROM (
+				  SELECT vr.vac_stat
+				  , DATE_FORMAT(vr.vac_rdate, '%Y-%m-%d') AS vac_rdate
+				  , ui.name
+				  , ui.dept_cd
+				  , vr.vac_type
+				  ,	vr.vac_no
+				  ,	vr.vac_sdate
+				  , dc.detail_name
+						FROM tb_vacation_request vr 
+							LEFT JOIN tb_userinfo ui ON ui.loginID = vr.loginID 
+							 inner join tb_detail_code dc on dc.group_code = 'VACcd' and dc.detail_code = vr.vac_type	
+						WHERE DATE_FORMAT(vr.vac_rdate, '%Y-%m-%d') BETWEEN #{startDate} AND #{endDate}
+        		  ) ll
+  		GROUP BY ll.vac_sdate, ll.vac_stat;
+	</select>
+	
+	<select id = "empTaCalendarDetailList" resultType="kr.happyjob.study.employee.model.EmpTaCalendarModel">
+		
+	   SELECT vr.vac_stat, DATE_FORMAT(vr.vac_rdate, '%Y-%m-%d') AS vac_rdate, dp.dept_name, ui.name, vr.vac_type, dc.detail_name, vr.vac_sdate
+	  	FROM tb_vacation_request vr 
+	  		 INNER JOIN tb_userinfo ui ON ui.loginID = vr.loginID 
+	  		 LEFT JOIN tb_dept dp ON dp.dept_cd = ui.dept_cd
+         inner join tb_detail_code dc on dc.group_code = 'VACcd' and dc.detail_code = vr.vac_type
+        where vr.vac_stat =#{vac_stat} and vr.vac_sdate = #{taDate}
+        
+	</select>
+</mapper>

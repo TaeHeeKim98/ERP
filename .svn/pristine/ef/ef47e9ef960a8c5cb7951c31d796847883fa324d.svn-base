@@ -1,0 +1,716 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+   pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>Job Korea</title>
+<!-- sweet alert import -->
+<script src='${CTX_PATH}/js/sweetalert/sweetalert.min.js'></script>
+<jsp:include page="/WEB-INF/view/common/common_include.jsp"></jsp:include>
+<!-- sweet swal import -->
+<script type="text/javascript">
+   // 그룹코드 페이징 설정
+   var pageSizeEmpDv = 5;
+   var pageBlockSizeEmpDv = 5;
+
+   /** OnLoad event */
+   $(function() {
+      
+      //콤보박스 설정 
+      fn_init(); 
+      
+      selectComCombo("accd", "accdal2", "all", $("#accall").val(), "");
+      
+      // 그룹코드 조회
+      fListEmpDv();
+
+      // 버튼 이벤트 등록
+      fRegisterButtonClickEvent();
+   });
+   
+   function fn_init(){
+      
+      comcombo("Okcd", "apptype", "all", "")
+      
+      //계정대분류코드 
+      selectComCombo("acc", "accall", "all", $("#accall").val(), "");
+      
+      $("#accall").change(function() {
+      selectComCombo("accd", "accdall", "all", $("#accall").val(), "");
+      }); 
+      
+      //모달창 부분 
+      $("#accal2").change(function() {
+         selectComCombo("accd", "accdal2", "sel", $("#accal2").val(), "");
+      });
+      
+      selectComCombo("acc", "accal2", "sel", $("#accal2").val(), "");
+
+      //거래처 
+      selectComCombo("cli", "cilall", "all", "", "");
+      
+   }
+   
+
+   /** 버튼 이벤트 등록 */
+   function fRegisterButtonClickEvent() {
+      $('a[name=btn]').click(function(e) {
+      
+         e.preventDefault();
+
+         var btnId = $(this).attr('id');
+
+         switch (btnId) {
+            case 'empDvSearchBtn' :
+               fListEmpDv(); 
+               break;
+            case 'btnInsertEmpDv' :
+               //null check 
+               $("#action").val("I"); 
+               fValidateEmpDv(); 
+               break;
+            case 'btnUpdateEmpDv' :
+               $("#action").val("U");
+               fValidateEmpDv(); 
+               break;
+            case 'btnDeleteEmpDv' :
+               $("#action").val("D");
+               DeleteUpDtlEmpDvAll();    
+               break;
+            //case 'btnCloseGrpCod' :
+            case 'btnCloseEmpDv' :
+               gfCloseModal();
+               break; 
+         }
+      }); 
+
+   
+   var upfile = document.getElementById('upfile');
+   upfile.addEventListener('change', 
+                                             function(event){    
+                                                      $("#fileinfo").empty();
+                                                                      var image = event.target;
+                                                                      var imgpath = "";
+                                                                      if(image.files[0])
+                                                                      {
+                                                                       alert(window.URL.createObjectURL(image.files[0]));           
+                                                                       imgpath =  window.URL.createObjectURL(image.files[0]);
+                                                                      }      
+                                                                       
+                                                                      var filearr = $("#upfile").val().split(".");
+                                                                      
+                                                                      var previewhtml = "";
+                                                                      
+                                                                      if(filearr[1] == "jpg" || filearr[1] == "png") {
+                                                                        previewhtml = "<img src='" + imgpath + "' style='width: 130px; height: 130px;' />";
+                                                                      }
+                                                                      
+                                                                      $("#fileinfo").empty().append(previewhtml);
+                                                                     
+                                                                  }
+                                  );
+   
+   }
+   /* 지출결의 폼 초기화 */
+    function fInitFormExpenseForm() {
+
+         $("#use_date").val("");
+         $("#expense").val("");
+         $("#loginID").val("");
+         $("#empName").val("");
+         $("#accal2").val("");
+         $("#accdal2").val("");
+         $("#use_department").val("");
+         $("#upfile").val("");
+         $("#etc").val("");
+         $("#fileinfo").empty();
+         
+         $("#btnInsertEmpDv").show();
+         
+          
+         $("#use_date").attr("readonly", false);
+         $("#expense").attr("readonly", false);
+         $("#name").attr("readonly", false);
+         $("#accal2").attr("disabled", false);
+         $("#accdal2").attr("disabled", false);
+         $("#etc2").attr("disabled", false);
+         
+         //$("#accdal2").hide();
+         
+         $("#use_department").attr("readonly", false);
+         $("#etc").attr("readonly", false);
+         $("#etc2").attr("readonly", true);
+         $("#etc2").attr("disabled", true);
+         
+         $("#cilall").attr("disabled", false);
+         $("#att_mul").attr("readonly", false);
+         $("#att_nli").attr("readonly", false);
+         $("#att_no").attr("readonly", false);
+         $('#upfile').attr('disabled', false );
+
+   } 
+
+   /* 지출결의 저장 validation */
+    function fValidateEmpDv() {
+
+       console.log('fValidateEmpDv():::::::::')
+      
+      var chk = checkNotEmpty(
+            [
+                  [ "accal2", "계정대분류명을 입력해 주세요." ]
+               ,   [ "accdal2 ", "계정과목을 입력해 주세요" ]
+               ,   [ "expense", "결의금액을 입력해 주세요." ]
+               ,   [ "use_date", "사용일자를 입력해 주세요." ]
+               
+            ]
+      );
+
+      if (!chk) {
+         return;
+      }
+      
+   
+      console.log('($("#action").val()', $("#action").val()); 
+      
+   
+      if($("#action").val()=="U"){
+         $("#btnUpdateEmpDv").show();
+         $("#btnDeleteEmpDv").show();
+         //action이 U 이면 수정 또는 삭제 
+         DeleteUpDtlEmpDvAll(); 
+      }else if($("#action").val()=="I"){
+         //action이 I 이면 추가 
+         fn_empdvsavefile();   
+      }
+      
+      
+   } 
+
+   /*Insert 지출결의 폼 */
+   function fPopModalInsertEmpDv(){
+      
+      $("#action").val("I");
+   
+      //정보 초기화 함수 호출 
+      fInitFormExpenseForm(); 
+      
+      // 모달 팝업
+      gfModalPop("#layer2");
+      
+      //수정 삭제 버튼 숨김
+      $("#btnUpdateEmpDv").hide();
+      $("#btnDeleteEmpDv").hide();
+      
+      //로그인한 사람 정보 조회 
+      fSelectEmpDvLoginInfo();
+      
+
+   }
+   
+   /** 지출결의서 조회 */
+   function fListEmpDv(currentPage) {
+
+      currentPage = currentPage || 1;
+
+      console.log("currentPage : " + currentPage);
+
+      console.log('from_date value:', $("#from_date").val()); 
+      console.log('to_date value:',$("#to_date").val()); 
+      
+      var param = {
+         
+            accdall : $("#accdall").val()
+         ,   accall : $("#accall").val()
+         ,   apptype : $("#apptype").val()    
+         ,   from_date : $("#from_date").val() 
+         ,   to_date : $("#to_date").val() 
+         ,    currentPage : currentPage
+         ,    pageSize : pageSizeEmpDv
+            
+      }
+
+      var resultCallback = function(data) {
+         flistEmpDvResult(data, currentPage);
+      };
+      
+      callAjax("/accounting/listEmpDv.do", "post", "text", true, param,resultCallback);
+   }
+
+   /** 지출결의 리스트 조회 콜백 함수 */
+   function flistEmpDvResult(data, currentPage) {
+
+      //swal(data);
+      console.log(data);
+
+      // 기존 목록 삭제
+      $('#listEmpDv').empty();
+
+      // 신규 목록 생성
+      $("#listEmpDv").append(data);
+
+      // 총 개수 추출
+
+      var totalCntEmpDv = $("#totalCntEmpDv").val();
+
+      // 페이지 네비게이션 생성
+
+      var paginationHtml = getPaginationHtml(currentPage, totalCntEmpDv,pageSizeEmpDv, pageBlockSizeEmpDv, 'fListEmpDv');
+      
+      console.log("paginationHtml : " + paginationHtml);
+      //swal(paginationHtml);
+      $("#empDvPagination").empty().append(paginationHtml);
+
+      // 현재 페이지 설정
+      $("#currentPageEmpDv").val(currentPage);
+   }
+
+    /* 지출결의 로그인 한 사람의 정보 조회 */
+     function fSelectEmpDvLoginInfo() {
+      
+      var param = {};
+      
+      var resultCallback = function(data) {
+         fSelectLoginInfoResult(data);
+      };
+      
+      callAjax("/accounting/selectEmpDvLoginInfo.do", "post", "json", true, param, resultCallback);
+   }  
+
+   /* 로그인 정보 조회 콜백 함수*/
+     function fSelectLoginInfoResult(data) {
+
+         console.log('fSelectLoginInfoResult data:', data); 
+      
+           $("#loginID").val(data.empDvLoginInfoModel.loginID);
+         $("#empName").val(data.empDvLoginInfoModel.name);
+         $("#use_department").val(data.empDvLoginInfoModel.dept_cd); 
+   
+   }  
+   
+   /*지출결의 폼 정보 Insert*/
+   function fn_empdvsavefile(){
+      
+      var frm = document.getElementById("myForm");
+      frm.enctype = 'multipart/form-data';
+      var dataWithFile = new FormData(frm);
+      
+      var saveempdvcallback = function(savereturn){
+         console.log("saveempdvcallback: ", JSON.stringify(savereturn)); 
+         
+         var curpage = 1; 
+         
+         if(savereturn.result == "SUCCESS") {
+            if($("#action").val() == "D") {
+               alert("삭제 되었습니다.");
+            } else {
+               alert("저장 되었습니다.");
+            }
+            
+            gfCloseModal();
+            
+            fListEmpDv(curpage);
+         }else{
+            alert("실패했습니다.")
+         }
+         
+      }
+      
+      callAjaxFileUploadSetFormData("/accounting/saveempdvfile.do", "post", "json", true, dataWithFile, saveempdvcallback);
+   }
+
+   /*지출결의서 상세 조회 */
+   function fn_empDvDtlModal(exp_no,exp_stat){
+      
+      $("#btnUpdateEmpDv").show();
+      $("#btnDeleteEmpDv").show();
+      
+      $("#btnInsertEmpDv").hide();
+      
+      console.log('exp_no:'+exp_no); 
+      $("#exp_no").val(exp_no);
+      
+      console.log('exp_stat:'+exp_stat); 
+      
+      // 모달창 열기 
+      gfModalPop("#layer2");
+
+      //정보 단건조회해서 모달창에 정보 넣기 
+      
+      var param = { exp_no : exp_no };
+      
+      var resultCallback = function(data) {
+         fn_EmpDvDtlModalResult(data);
+      }
+      
+      callAjax("/accounting/empDvDtlModal.do", "post", "json", true, param, resultCallback);
+      
+   }
+   
+   /*모달창 결과 수정 삭제 버튼 클릭시 여기로옴 */
+   /*모달창 결의번호 클릭시도 여기로 옴 */
+   function fn_EmpDvDtlModalResult(data){
+         
+         $("#accal2").val("");
+      
+         //var data = data; 
+         console.log('fn_EmpDvDtlModalResult data', data); 
+         
+         if(data !=null ){
+         
+            $("#etc2").attr("readonly", true);
+            $("#etc2").attr("disabled", true);
+            $("#etc").attr("readonly", false);
+            console.log('data.EmpDvOneModel.att_no', data.EmpDvOneModel.att_no); 
+            
+            //모달창에 상세정보 넣기 
+            
+            $("#empName").val(data.EmpDvOneModel.name);
+            $("#loginID").val(data.EmpDvOneModel.loginID);
+            
+            $("#exp_no").val(data.EmpDvOneModel.exp_no); 
+            $("#etc2").val(data.EmpDvOneModel.exp_rere); 
+            
+            $("#use_date").val(data.EmpDvOneModel.exp_sdate);
+            $("#expense").val(data.EmpDvOneModel.exp_cost);
+            
+            selectComCombo("acc", "accal2", "sel", $("#accal2").val(), data.EmpDvOneModel.acc_no);
+              selectComCombo("accd", "accdal2", "sel", data.EmpDvOneModel.acc_no, data.EmpDvOneModel.dac_no);
+            $("#use_department").val(data.EmpDvOneModel.dept_cd);
+            
+            $("#etc").val(data.EmpDvOneModel.exp_cont);
+            $("#cilall").val(data.EmpDvOneModel.exp_snm);
+            
+            $("#fileinfo").text(data.EmpDvOneModel.att_ori);
+            $("#att_mul").val(data.EmpDvOneModel.att_mul); 
+            $("#att_nli").val(data.EmpDvOneModel.att_nli); 
+            $("#att_no").val(data.EmpDvOneModel.att_no);
+            $("#att_ori").val(data.EmpDvOneModel.att_ori);
+            $("#att_size").val(data.EmpDvOneModel.att_size);
+            
+            
+            $("#upfile").val(""); 
+            
+            $("#btnInsertEmpDv").hide();
+            
+             //파일명이 null이면.. fileinfo의 fileinfo를 비워준다. 
+             if( data.EmpDvOneModel.att_ori == "" || data.EmpDvOneModel.att_ori == null || data.EmpDvOneModel.att_ori == undefined) {     
+                 var previewhtml = "";
+                     previewhtml = "<span>첨부파일이 없습니다</span>";
+                     $("#fileinfo").empty().append(previewhtml); 
+                     
+                 }else{
+                    //미리 파일 이미지 볼 수 있도록 작성한 코드 
+                    var filearr = data.EmpDvOneModel.att_ori.split(".");
+                    
+                    console.log('filearr'+filearr); 
+                    
+                    var previewhtml = "";
+                    if(filearr[1] == "jpg" || filearr[1] == "png") {
+                         previewhtml = "<a href='javascript:download(" + data.EmpDvOneModel.exp_no + ")'>" + "<img src='" + data.EmpDvOneModel.att_nli + "' style='width: 130px; height: 130px;' />" + "</a>";
+                    }else{
+                      previewhtml = "<a href='javascript:download(" + data.EmpDvOneModel.exp_no + ")'>" + data.EmpDvOneModel.att_ori  + "</a>";
+                    }
+                       
+                    $("#fileinfo").empty().append(previewhtml);
+               }
+           } 
+      
+         //아래 if조건문은 모달창에 데이터 넣은 뒤 분기 
+         
+         console.log('승인여부체크  data.EmpDvOneModel.exp_stat', data.EmpDvOneModel.exp_stat); 
+         
+         if(data.EmpDvOneModel.exp_stat == '2' || data.EmpDvOneModel.exp_stat == '3' || exp_stat == '승인' || exp_stat == '반려'){
+            
+         //승인 또는 반려이면 변경할 수 없도록 변경 
+   
+         $("#use_date").attr("readonly", true);
+         $("#expense").attr("readonly", true);
+         $("#name").attr("readonly", true);
+         $("#accal2").attr("disabled", true);
+         $("#accdal2").attr("disabled", true);
+         
+         $("#use_department").attr("readonly", true);
+         $("#etc").attr("readonly", true);
+         $("#cilall").attr("disabled", true);
+         $("#att_mul").attr("readonly", true);
+         $("#att_nli").attr("readonly", true);
+         $("#att_no").attr("readonly", true);
+         $("#etc").attr("readonly", true);
+         
+          
+
+         $("#upfile").attr("disabled", true);
+          $('#upfile').css('display', 'none');
+         
+         $("#btnInsertEmpDv").hide();
+         $("#btnUpdateEmpDv").hide();
+         $("#btnDeleteEmpDv").hide();
+         
+         }else{
+               $("#use_date").attr("readonly", false);
+               $("#expense").attr("readonly", false);
+               $("#name").attr("readonly", false);
+               $("#accal2").attr("disabled", false);
+               $("#accdal2").attr("disabled", false);
+
+               $("#use_department").attr("readonly", false);
+               $("#etc").attr("readonly", false);
+               $("#cilall").attr("disabled", false);
+               $("#att_mul").attr("readonly", false);
+               $("#att_nli").attr("readonly", false);
+               $("#att_no").attr("readonly", false);
+               $("#etc").attr("readonly", false);
+
+               $("#upfile").attr("disabled", false);
+               $('#upfile').css('display', 'block');
+            }
+            
+         $("#exp_no").val(data.EmpDvOneModel.exp_no);
+         $("#exp_stat").val(data.EmpDvOneModel.exp_stat);
+         
+         
+   }
+   
+    //download controller 통신 
+    function download(exp_no) {
+         
+          var params = "<input type='hidden' name='exp_no' value='"+ exp_no +"' />";
+          
+          jQuery("<form action='/accounting/empdvdownloadfile.do' method='post'>"+params+"</form>").appendTo('body').submit().remove();
+          
+          
+    }
+   
+   //상세조회 deleteupdate 하는곳  
+   function DeleteUpDtlEmpDvAll(){
+      
+     var frm = document.getElementById("myForm");
+      frm.enctype = 'multipart/form-data';
+      var dataWithFile = new FormData(frm);
+      
+      var resultCallback = function(data){
+         fn_EmpDvDtlModalUpDelRe(data); 
+      }
+      
+      //수정 삭제 컨트롤러로 이동 
+       callAjaxFileUploadSetFormData("/accounting/empDvUpdateDelModal.do", "post", "json", true, dataWithFile, resultCallback);
+      
+   }
+   
+   
+   function fn_EmpDvDtlModalUpDelRe(data){
+      
+      var currentPage = $("#currentPageEmpDv").val();
+      
+      console.log('fn_EmpDvDtlModalUpDelRe data', JSON.stringify(data)); 
+      
+      
+      if(data.result == "SUCCESS"){
+         
+         // 응답 메시지 출력
+         alert(data.resultMsg);
+         
+         // 모달 닫기
+         gfCloseModal();
+         
+         //정보 초기화 함수 호출 
+         fInitFormExpenseForm(); 
+         
+         // 그룹코드 목록 조회
+         fListEmpDv(currentPage);
+         
+      }else{
+         alert('실패하였습니다.');
+      }
+
+   }
+   
+</script>
+</head>
+<body>
+   <form id="myForm" action="" method="" >
+      <input type="hidden" id="currentPageEmpDv" value="1"> 
+      <input type="hidden" id="currentPageComnDtlCod" value="1"> 
+      <input type="hidden" id="tmpGrpCod" value=""> 
+      <input type="hidden" id="tmpGrpCodNm" value=""> 
+      <input type="hidden" name="action" id="action" value="">
+      <input type="hidden" name="exp_no" id="exp_no" value="">
+      <input type="hidden" name="exp_stat" id="exp_stat" value="">
+
+      <div id="wrap_area">
+
+         <h2 class="hidden">header 영역</h2>
+         <jsp:include page="/WEB-INF/view/common/header.jsp"></jsp:include>
+
+         <h2 class="hidden">컨텐츠 영역</h2>
+         <div id="container">
+            <ul>
+               <li class="lnb">
+                  <!-- lnb 영역 --> <jsp:include
+                     page="/WEB-INF/view/common/lnbMenu.jsp"></jsp:include> <!--// lnb 영역 -->
+               </li>
+               
+               
+               <li class="contents">
+                  <!-- contents -->
+                  <h3 class="hidden">contents 영역</h3> <!-- content -->
+                  <div class="content">
+
+                     <p class="Location">
+                        <a href="../dashboard/dashboard.do" class="btn_set home">메인으로</a>
+                        <span class="btn_nav bold">기준정보</span> <span
+                           class="btn_nav bold">지출결의서 관리</span> <a
+                           href="../accounting/empDv.do" class="btn_set refresh">새로고침</a>
+                     </p>
+
+                     <p class="conTitle">
+                        <span>지출 결의서</span> 
+                     </p>
+                     
+                           <!--검색창  -->
+               <table width="100%" cellpadding="5" cellspacing="0" border="1" align="left" style=" border-collapse: collapse; border: 1px #50bcdf;">
+                      <tr style="border: 0px; border-color: blue" >
+                        <td> 신청일자 :
+                          <input type="date" style="width: 120px" id="from_date" name="from_date"> &nbsp;&nbsp;&nbsp;
+                             -                                                       &nbsp;&nbsp;&nbsp;
+                            <input type="date" style="width: 120px" id="to_date" name="to_date"></td>
+                          </tr>
+                          <tr>
+                             <td>                               
+                                   계정대분류 :<select id="accall" name="accall"  v-model="accall"></select>&nbsp;&nbsp;
+                                   계정과목 :<select id="accdall" name="accdall" v-model="accdall"></select>&nbsp;&nbsp;
+                                  승인여부 : <select id = "apptype" name = "apptype" style="width: 90px"></select>&nbsp;&nbsp;
+                           <a href="" class="btnType blue" id="empDvSearchBtn" name="btn"><span>조  회</span></a></td>
+                           <td><span class="fr"> <a class="btnType blue" href="javascript:fPopModalInsertEmpDv();" name="modal"><span>신규등록</span></a></span></td>
+                        </tr>
+                        
+                     </table>    
+                   
+                     <div class="empDvList">
+                        <table class="col">
+                           <caption>caption</caption>
+                           <colgroup>
+                              <col width="6%">
+                              <col width="17%">
+                              <col width="20%">
+                              <col width="17%">
+                              <col width="10%">
+                              <col width="10%">
+                              <col width="10%">
+                              <col width="10%">
+                           </colgroup>
+
+                           <thead>
+                              <tr>
+                              <th scope="col">결의번호</th>
+                              <th scope="col">신청일자</th>
+                              <th scope="col">사용일자</th>
+                              <th scope="col">계정대분류명</th>
+                              <th scope="col">계정과목</th>
+                              <th scope="col">사용부서</th>
+                              <th scope="col">결의금액</th>
+                              <th scope="col">승인여부</th>   
+                           </tr>
+                           </thead>
+                           <tbody id="listEmpDv"></tbody>
+                        </table>
+                     
+                     <div class="paging_area" id="empDvPagination"></div>
+                     </div>
+                  </div>    
+                  </li>
+               </ul>
+            </div>
+      </div>
+
+
+      <!-- 지출결의서 모달팝업 -->
+    <div id="layer2" class="layerPop layerType2" style="width: 1100px;">
+       <input type="hidden" readonly="readonly" style="width: 40px" class="inputTxt p100" id="use_department" name="use_department" /> 
+                     
+      <dl>
+         <dt>
+            <strong>지출 결의</strong>
+         </dt>
+         <dd class="content">
+
+            <!-- s : 여기에 내용입력 -->
+
+            <table class="row">
+               <caption>caption</caption>
+               <tbody>
+                  <tr>
+                     <th scope="row">사용일자<span class="font_red">*</span></th>
+                     <td colspan="1"><input type="date"  class="inputTxt p100" id="use_date" name="use_date" required="required" /></td>
+                     
+                     <th scope="row">결의금액<span class="font_red">*</span></th>
+                     <td><input type="text" style="width: 40px" class="inputTxt p100" id="expense" name="expense" oninput="this.value = this.value.replace(/[^0-9]/g, '');" required="required"/></td>
+                     
+                  </tr>
+                  <tr>
+                     <th scope="row">사번 <span class="font_red">*</span></th>
+                     <td><input type="text" readonly="readonly" style="width: 40px" class="inputTxt p100" id="loginID" name="loginID" /></td>
+                     
+                     <th scope="row">사원명 <span class="font_red">*</span></th>
+                     <td><input type="text" readonly="readonly" style="width: 40px" class="inputTxt p100" id="empName" name="empName" /></td>
+                  
+                     
+                  </tr>
+                  
+                  <tr>
+                     <th scope="row">계정대분류명<span class="font_red">*</span></th>
+                     <td><select id="accal2" name="accal2"  required="required"></select></td>
+                                   
+                     <th scope="row">계정과목<span class="font_red">*</span></th>
+                     <td><select id="accdal2" name="accdal2" required="required" ></select></td>
+                  </tr>
+                  <tr>
+                     <!-- <th scope="row">사용부서 <span class="font_red">*</span></th> -->
+                     
+                     <th scope="row">거래처</th>
+                     <td><select id="cilall" name="cilall" ></select></td>
+                     
+                     <th scope="row">파일</th>
+                     <td>
+                        <input type="file" id="upfile"  name="upfile" />
+                        <div id="fileinfo"></div>
+                     </td>
+                     <td >
+                         <input type = "hidden" id = att_mul name = "att_mul">
+                         <input type = "hidden" id = att_mul name = "att_ori">
+                         <input type = "hidden" id = att_mul name = "att_size">
+                         <input type = "hidden" id = att_nli name = "att_nli">
+                         <input type = "hidden" id = att_no name = "att_no">
+                         
+                     </td>
+                     
+                  </tr>
+                  
+                   <tr>
+                     <th scope="row">비고<span class="font_red">*</span></th>
+                     <td colspan="4"><textarea cols = "200" rows = "10" id="etc" name="etc" ></textarea></td>                     
+                  </tr>  
+                   <tr>
+                     <th scope="row">반려사유<span class="font_red">*</span></th>
+                     <td colspan="4"><textarea cols = "200" rows = "10" id="etc2" name="etc2" ></textarea></td>                     
+                  </tr>  
+                  
+                  </tbody>
+            
+            </table>
+            <div class="btn_areaC mt30">
+               <a href="" class="btnType blue" id="btnInsertEmpDv" name="btn"><span>신청</span></a>
+               <a href="" class="btnType blue" id="btnUpdateEmpDv" name="btn"><span>수정</span></a>
+               <a href="" class="btnType blue" id="btnDeleteEmpDv" name="btn"><span>삭제</span></a>   
+               <a href="" class="btnType gray" id="btnCloseEmpDv" name="btn"><span>취소</span></a>
+            </div>
+         </dd>
+      </dl>
+      <a href="" class="closePop"><span class="hidden">닫기</span></a>
+   </div> 
+   </form>
+</body>
+</html>

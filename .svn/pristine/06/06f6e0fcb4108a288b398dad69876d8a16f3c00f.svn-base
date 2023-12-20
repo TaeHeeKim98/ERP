@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.accounting.dao.EmpDvDao">
+
+   <!-- 지출결의 리스트 목록 조회 -->
+   <select id="listEmpDv" resultType="kr.happyjob.study.accounting.model.EmpDvModel">
+      
+      SELECT ll.exp_no
+         ,DATE_FORMAT(ll.exp_date, '%Y-%m-%d') as exp_date 
+         ,DATE_FORMAT(ll.exp_sdate, '%Y-%m-%d') as exp_sdate
+         ,exac.acc_nm
+         ,ll.dac_nm
+        ,ll.loginID
+         ,(select dept_name from tb_dept where ll.dept_cd = tb_dept.dept_cd )as dept_name
+          ,ll.exp_cost
+          ,CASE WHEN ll.exp_stat = '1' THEN '승인대기중' 
+                WHEN ll.exp_stat = '2' THEN '승인' 
+                  ELSE '반려' END as exp_stat
+         FROM tb_expend_account exac
+                RIGHT JOIN (
+                            SELECT  expe.exp_no
+                                  , expe.exp_date
+                                  , expe.exp_sdate
+                                  , exdt.acc_no
+                                  , exdt.dac_nm
+                                  , expe.dept_cd
+                                  , expe.exp_cost
+                                  , expe.exp_stat
+                                  , expe.dac_no
+                              , expe.loginID
+                            FROM tb_expend expe
+                              INNER JOIN tb_expend_dtlaccount exdt ON expe.acc_no = exdt.acc_no and expe.dac_no = exdt.dac_no
+                  ) ll ON ll.acc_no = exac.acc_no
+         
+    
+   WHERE ll.loginID = #{loginID}
+             <if test="(from_date != null) and (!from_date.equals(''))">
+                  and exp_date <![CDATA[>=]]> STR_TO_DATE(#{from_date}, '%Y-%m-%d')  
+             </if>
+             <if test="(to_date != null) and (!to_date.equals(''))">
+                  and exp_date <![CDATA[<=]]> STR_TO_DATE(#{to_date}, '%Y-%m-%d')  
+             </if>   
+              <if test="(accall != null) and (!accall.equals(''))">
+                  and ll.acc_no = #{accall}
+             </if>   
+             <if test="(accdall != null) and (!accdall.equals(''))">
+                  and ll.dac_no = #{accdall}
+             </if>   
+             <if test="(apptype != null) and (!apptype.equals(''))">
+                  and ll.exp_stat = #{apptype} 
+             </if>    
+             <if test="(apptype != null) and (!apptype.equals(''))">
+                  and ll.exp_stat = #{apptype} 
+             </if>    
+                       
+             
+     
+     
+   ORDER BY exp_no desc
+   LIMIT #{pageIndex}, #{pageSize}
+      
+      
+   </select>
+   
+   <!-- 지출결의 리스트 목록 총 갯수 조회 -->
+   <select id="countListEmpDv" resultType="int">
+      
+   SELECT COUNT(1) AS tot_cnt 
+   FROM (
+         select ll.exp_no
+               ,ll.exp_date
+               ,ll.exp_sdate
+               ,exac.acc_nm
+               ,ll.dac_nm
+               ,ll.acc_no
+               ,ll.dac_no
+                ,ll.loginID
+               ,ll.exp_stat as ext_tt
+               ,(select dept_name from tb_dept where ll.dept_cd = tb_dept.dept_cd )as dept_name
+               ,ll.exp_cost
+               ,CASE WHEN ll.exp_stat = '1' THEN '승인대기중' 
+                  WHEN ll.exp_stat = '2' THEN '승인' 
+                     ELSE '반려' END as exp_stat
+         from tb_expend_account exac
+             right join (
+             select  expe.exp_no
+                   , expe.exp_date
+                   , expe.exp_sdate
+                   , exdt.acc_no
+                   , exdt.dac_nm
+                   , expe.dept_cd
+                   , expe.exp_cost
+                   , expe.exp_stat
+                   , expe.dac_no
+                     , expe.loginID
+             from tb_expend expe
+               inner join tb_expend_dtlaccount exdt on expe.acc_no = exdt.acc_no and expe.dac_no = exdt.dac_no
+                     ) ll on ll.acc_no = exac.acc_no
+           
+    ) total
+    
+   WHERE total.loginID = #{loginID} 
+       
+             <if test="(from_date != null) and (!from_date.equals(''))">
+                  and exp_date <![CDATA[>=]]> STR_TO_DATE(#{from_date}, '%Y-%m-%d')  
+             </if>
+             <if test="(to_date != null) and (!to_date.equals(''))">
+                  and exp_date <![CDATA[<=]]> STR_TO_DATE(#{to_date}, '%Y-%m-%d')  
+             </if>   
+             <if test="(accall != null) and (!accall.equals(''))">
+                  and acc_no = #{accall}
+             </if>   
+             <if test="(accdall != null) and (!accdall.equals(''))">
+                  and dac_no = #{accdall}
+             </if>   
+             <if test="(apptype != null) and (!apptype.equals(''))">
+                  and total.ext_tt = #{apptype} 
+             </if>    
+
+    
+   </select>
+   
+   <!-- 로그인한 사람의 기본정보 조회 -->
+   <select id ="empDvLoginInfo" resultType="kr.happyjob.study.accounting.model.EmpDvLoginInfoModel">
+   
+      SELECT     ui.loginID
+              ,ui.name 
+                  ,ui.dept_cd 
+      FROM tb_userinfo ui
+      WHERE ui.loginID =  #{loginID};
+
+   </select>
+   
+   
+   <!-- 신청서 폼에서 파일 insert할 때  -->
+   <insert id="insertempdvfile">
+        <selectKey resultType="int" keyProperty="att_no" order="BEFORE">
+            select ifnull(max(att_no),0) + 1 from tb_attachment 
+        </selectKey>             
+       insert into tb_attachment
+           (
+               att_no
+              ,ref_list_no
+               ,ref_seq_no
+               ,att_ori
+               ,att_date
+               ,att_sta
+               ,att_nli
+               ,att_mul
+               ,att_size
+           ) values (
+              #{att_no}
+             ,20
+             , (select max(exp_no) from tb_expend) 
+             <!-- (select ifnull(max(ann_no),0) + 1 from tb_announce) -->
+             ,#{fileinf.file_nm}
+             ,now()
+             ,'N'
+             ,#{fileinf.loc_file_loc}
+             ,#{fileinf.file_loc}
+             ,#{fileinf.file_size}
+           )
+   </insert>
+   
+   <!-- update 폼에서 수정할때 파일 insert 부분 -->
+   <insert id="upinnerinsertfile">
+    <selectKey resultType="int" keyProperty="att_no" order="BEFORE">
+            select ifnull(max(att_no),0) + 1 from tb_attachment 
+        </selectKey>      
+    insert into tb_attachment
+           (
+               att_no
+              ,ref_list_no
+               ,ref_seq_no
+               ,att_ori
+               ,att_date
+               ,att_sta
+               ,att_nli
+               ,att_mul
+               ,att_size
+           ) values (
+              #{att_no}
+             ,20
+             ,#{exp_no}
+             <!-- (select ifnull(max(ann_no),0) + 1 from tb_announce) -->
+             ,#{fileinf.file_nm}
+             ,now()
+             ,'N'
+             ,#{fileinf.loc_file_loc}
+             ,#{fileinf.file_loc}
+             ,#{fileinf.file_size}
+           )
+   </insert>
+   
+   <insert id="insertempdv">
+     <selectKey resultType="int" keyProperty="exp_no" order="BEFORE">
+            select ifnull(max(exp_no),0) + 1 from tb_expend
+        </selectKey>          
+        insert into tb_expend
+            (
+                 exp_no
+               , acc_no
+               , dac_no 
+               , loginID 
+               , exp_date 
+               , exp_sdate 
+               , dept_cd 
+               , exp_snm 
+              
+               , exp_cost 
+               , exp_stat
+   
+            ) values (
+                #{exp_no}
+               ,#{accal2}
+               ,#{accdal2}
+               ,#{loginID}
+               ,now()
+               ,#{use_date}
+               ,#{use_department} 
+               ,#{cilall}
+              <!--  ,#{etc} -->
+               ,#{expense}
+               ,1
+          
+            )
+   </insert>
+   
+   <select id="selectOnenotice" resultType="kr.happyjob.study.accounting.model.EmpDvModel">
+      select  
+            ll.exp_no 
+             ,ll.loginID
+             ,ll.acc_no
+             ,ll.dac_no
+             ,ll.exp_date
+             ,ll.exp_sdate
+             ,ll.dept_cd
+             ,ll.exp_snm
+             ,ll.exp_cost
+             ,ll.exp_bo  
+             ,ll.exp_stat
+             ,ll.exp_cont
+             ,ll.exp_rere
+             ,ll.exp_pdate 
+             ,ll.att_nli  
+             ,ll.att_mul
+             ,ll.att_ori
+              ,ll.att_no
+               ,ui.loginID
+               ,ui.name
+            from tb_userinfo ui 
+              inner join (
+            
+            SELECT      ep.exp_no 
+                         ,ep.loginID
+                         ,ep.acc_no
+                         ,ep.dac_no
+                         ,ep.exp_date
+                         ,ep.exp_sdate
+                         ,ep.dept_cd
+                         ,ep.exp_snm
+                         ,exp_cost
+                         ,exp_bo  
+                         ,exp_stat
+                         ,exp_cont
+                         ,exp_rere
+                         ,exp_pdate 
+                         ,at.att_nli  
+                         ,at.att_mul
+                         ,at.att_ori
+                        ,at.att_no
+                  FROM tb_expend ep 
+                        LEFT OUTER JOIN tb_attachment at ON at.ref_seq_no = ep.exp_no
+                    
+                 ) ll on ll.loginID = ui.loginID
+   WHERE ll.exp_no = #{exp_no} 
+   
+   </select>
+   
+   <update id="updateexpend">
+       update tb_expend 
+          set acc_no = #{accal2}
+             ,dac_no = #{accdal2} 
+             ,exp_sdate = #{use_date} 
+             ,exp_snm = #{cilall} 
+             ,exp_cost = #{expense} 
+             ,exp_cont = #{etc} 
+       where exp_no = #{exp_no}  
+   </update>
+   
+   <update id="updatefileempdv">
+         UPDATE tb_attachment
+            SET att_ori = #{att_ori}
+                 ,att_date = now()
+                 ,att_nli = #{att_nli}
+                 ,att_mul = #{att_mul} 
+                 ,att_size = #{att_size}  
+         WHERE ref_list_no = 20 AND ref_seq_no = #{exp_no}
+            
+   </update>
+   
+   <delete id="expendfiledelete">
+            DELETE FROM tb_attachment 
+           WHERE ref_list_no = 20 AND ref_seq_no = #{exp_no}
+   </delete>
+   
+   <delete id="expenddelete">
+       delete from tb_expend 
+           where exp_no = #{exp_no}
+   </delete>
+   
+   
+</mapper>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.employee.dao.EmppayaccDao">
+
+
+	<!-- 그룹코드 목록 조회 -->
+
+	<select id="listEmployeeModel" resultType="kr.happyjob.study.employee.model.EmppayaccModel">
+		/*kr.happyjob.study.employee.dao.EmppayaccDao.listEmployeeModel*/
+		  
+       	select ui.loginId
+		     , ui.name as writer
+		     , dept.dept_name
+             , dc.detail_name as job_cd
+             ,year(curdate())-year(ui.user_date) as dept_year
+		 from tb_userinfo ui
+              inner join tb_dept dept on ui.dept_cd = dept.dept_cd
+              inner join tb_detail_code dc on dc.group_code = 'POScd' and dc.detail_code = ui.job_cd         
+              
+	    where ui.loginId = #{loginID}    
+	</select>
+	
+	<select id="listPayModel" resultType="kr.happyjob.study.employee.model.EmppayaccModel">
+		/*kr.happyjob.study.employee.dao.EmppayaccDao.listPayModel*/
+       	   
+			 select   ui.loginid 
+			 		 ,FORMAT(ui.sal_kuk, 0) sal_kuk
+                     ,FORMAT(ui.sal_ko, 0) sal_ko
+                     ,FORMAT(ui.sal_kun, 0) sal_kun
+                     ,FORMAT(ui.sal_san, 0) sal_san
+                     ,FORMAT(ui.sal_bt, 0) sal_bt 
+                     ,FORMAT(ui.sal_price, 0) sal_price 
+                     ,FORMAT(ui.sal_ad, 0) sal_ad                                 
+                     ,DATE_FORMAT(sa.sal_date,'%Y-%m') sal_date
+                     ,ifnull(( select sum(exp_cost)
+                          from tb_expend
+                          where loginID = #{loginID}
+                          and  DATE_FORMAT(exp_pdate,'%Y-%m')
+                          group by loginID, DATE_FORMAT(exp_pdate,'%Y-%m')
+                        ), 0) exp_cost
+                        
+                from tb_userinfo ui
+                 inner join tb_salary sa on sa.loginID = ui.loginID
+               where ui.loginID = #{loginID}   
+               <if test="(to_month != null) and (!to_month.equals(''))">
+                and DATE_FORMAT(sa.sal_date,'%Y-%m') like #{to_month}
+               </if>
+               group by ui.loginID = #{loginID}
+               limit 0,1;
+	</select>
+</mapper>
